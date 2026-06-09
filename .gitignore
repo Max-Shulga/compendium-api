@@ -1,0 +1,32 @@
+# Compiled output
+/dist
+/build
+
+# Node
+node_modules
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.cursor/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+/coverage
+
+# Logs
+logs
+*.log
