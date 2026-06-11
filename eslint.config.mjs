@@ -19,28 +19,28 @@ export default [
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest,
+        ...globals.jest
       },
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+        tsconfigRootDir: import.meta.dirname
+      }
+    }
   },
 
   {
     files: ['**/*.ts'],
     plugins: {
-      import: importPlugin,
+      import: importPlugin
     },
 
     settings: {
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,
-          project: './tsconfig.json',
-        },
-      },
+          project: './tsconfig.json'
+        }
+      }
     },
 
     rules: {
@@ -73,8 +73,6 @@ export default [
 
       semi: ['error', 'always'],
       quotes: ['error', 'single'],
-      indent: ['error', 2],
-      'comma-dangle': ['error', 'never'],
       'object-curly-spacing': ['error', 'always'],
       'arrow-parens': ['error', 'always'],
       'arrow-body-style': ['error', 'as-needed'],
@@ -94,13 +92,20 @@ export default [
       'import/order': [
         'error',
         {
-          groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index'
+          ],
           'newlines-between': 'always',
           alphabetize: {
             order: 'asc',
-            caseInsensitive: true,
-          },
-        },
+            caseInsensitive: true
+          }
+        }
       ],
 
       '@typescript-eslint/no-explicit-any': 'error',
@@ -116,7 +121,10 @@ export default [
       '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
 
-      'prettier/prettier': ['error', { endOfLine: 'auto' }],
-    },
-  },
+      'prettier/prettier': [
+        'error',
+        { endOfLine: 'auto', trailingComma: 'none' }
+      ]
+    }
+  }
 ];
