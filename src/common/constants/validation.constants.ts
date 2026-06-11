@@ -1,0 +1,3 @@
+const MIN_PASSWORD_LENGTH = 10;
+
+export { MIN_PASSWORD_LENGTH };
