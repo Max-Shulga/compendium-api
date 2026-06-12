@@ -1,5 +1,5 @@
 import { registerAs } from '@nestjs/config';
 
 export const appConfig = registerAs('app', () => ({
-  port: parseInt(process.env.PORT ?? '3000', 10)
+  port: parseInt(process.env.PORT ?? '8000', 10)
 }));
