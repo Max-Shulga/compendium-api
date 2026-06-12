@@ -64,7 +64,7 @@ export class AuthenticationService {
       .where('user.email = :email', { email: signInDto.email })
       .getOne();
     if (!user) {
-      throw new UnauthorizedException('User does not exists');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const isEqual = await this.hashingService.compare(
@@ -73,7 +73,7 @@ export class AuthenticationService {
     );
 
     if (!isEqual) {
-      throw new UnauthorizedException('Password does not match');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     return this.generateTokens(user);
