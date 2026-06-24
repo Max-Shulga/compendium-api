@@ -4,7 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { RedisModule } from './common/redis/redis.module';
 import { appConfig, databaseConfig, redisConfig } from './config';
+import { CardsModule } from './modules/cards/cards.module';
 import { IamModule } from './modules/iam/iam.module';
+import { TopicsModule } from './modules/topics/topics.module';
 import { UserModule } from './modules/users/user.module';
 
 @Module({
@@ -28,7 +30,9 @@ import { UserModule } from './modules/users/user.module';
     }),
     RedisModule,
     IamModule,
-    UserModule
+    UserModule,
+    CardsModule,
+    TopicsModule
   ],
   controllers: [],
   providers: []

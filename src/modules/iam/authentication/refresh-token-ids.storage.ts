@@ -19,11 +19,11 @@ export class RefreshTokenIdsStorage implements OnApplicationShutdown {
 
   async validate(userId: number, tokenId: string): Promise<boolean> {
     const storeId = await this.redisClient.get(this.getKey(userId));
-    if (storeId === tokenId) {
+    if (storeId !== tokenId) {
       throw new InvalidatedRefreshTokenError();
     }
 
-    return storeId === tokenId;
+    return true;
   }
 
   async invalidate(userId: number): Promise<void> {

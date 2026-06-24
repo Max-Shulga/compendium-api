@@ -1,24 +1,22 @@
 import type { INestApplication } from '@nestjs/common';
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import type { App } from 'supertest/types';
+import type { DataSource } from 'typeorm';
 
-import { AppModule } from './../src/app.module';
+import { createApp } from './helpers/app';
 
 describe('App (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
+  let dataSource: DataSource;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule]
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  beforeAll(async () => {
+    ({ app, dataSource } = await createApp());
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
+    await dataSource.query('DELETE FROM users');
     await app.close();
+  });
+
+  it('app initializes successfully', () => {
+    expect(app).toBeDefined();
   });
 });
