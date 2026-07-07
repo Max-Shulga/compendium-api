@@ -14,6 +14,8 @@ import { ApiTags } from '@nestjs/swagger';
 
 import { PaginationQueryDto } from '@/common/dto/pagination-query.dto';
 
+import { Auth } from '../iam/authentication/decorators/auth.decorators';
+import { AuthType } from '../iam/authentication/enums/auth-type.enum';
 import { Roles } from '../iam/authorization/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
 
@@ -29,11 +31,13 @@ import { TopicsService } from './topics.service';
 export class TopicsController {
   constructor(private readonly topicService: TopicsService) {}
 
+  @Auth(AuthType.None)
   @Get()
   findAll(@Query() paginationQuery: PaginationQueryDto): Promise<Topic[]> {
     return this.topicService.findAll(paginationQuery);
   }
 
+  @Auth(AuthType.None)
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Topic> {
     return this.topicService.findOne(id);
