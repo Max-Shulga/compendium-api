@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
-import { Card } from '@/modules/cards/entities/card.entity';
+import { Card } from '../../cards/entities/card.entity';
 
 import { Topic } from './topic.entity';
 
