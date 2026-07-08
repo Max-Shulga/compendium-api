@@ -80,10 +80,13 @@ describe('Cards (e2e)', () => {
   });
 
   describe('GET /cards', () => {
-    it('401 without token', () =>
-      request(app.getHttpServer())
+    it('200 without token (public)', async () => {
+      const res = await request(app.getHttpServer())
         .get('/cards')
-        .expect(HttpStatus.UNAUTHORIZED));
+        .expect(HttpStatus.OK);
+
+      expect(Array.isArray(res.body)).toBe(true);
+    });
 
     it('200 returns array', async () => {
       const res = await request(app.getHttpServer())
