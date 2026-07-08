@@ -1,22 +1,27 @@
-import type { INestApplication } from '@nestjs/common';
-import type { DataSource } from 'typeorm';
+import type { APIRequestContext } from '@playwright/test';
+import { expect, request as playwrightRequest, test } from '@playwright/test';
+import type { Client } from 'pg';
 
-import { createApp } from './helpers/app';
+import { createDbClient } from './helpers/db';
 
-describe('App (e2e)', () => {
-  let app: INestApplication;
-  let dataSource: DataSource;
+test.describe('App (e2e)', () => {
+  let api: APIRequestContext;
+  let db: Client;
 
-  beforeAll(async () => {
-    ({ app, dataSource } = await createApp());
+  test.beforeAll(async () => {
+    api = await playwrightRequest.newContext();
+    db = createDbClient();
+    await db.connect();
   });
 
-  afterAll(async () => {
-    await dataSource.query('DELETE FROM users');
-    await app.close();
+  test.afterAll(async () => {
+    await db.query('DELETE FROM users');
+    await db.end();
+    await api.dispose();
   });
 
-  it('app initializes successfully', () => {
-    expect(app).toBeDefined();
+  test('app initializes successfully', async () => {
+    const res = await api.get('/cards');
+    expect(res.ok()).toBeTruthy();
   });
 });

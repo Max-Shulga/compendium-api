@@ -126,5 +126,13 @@ export default [
         { endOfLine: 'auto', trailingComma: 'none' }
       ]
     }
+  },
+
+  {
+    files: ['src/migrations/**/*.ts'],
+    rules: {
+      'max-len': 'off',
+      'prettier/prettier': 'off'
+    }
   }
 ];

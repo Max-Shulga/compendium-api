@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from './common/redis/redis.module';
 import { appConfig, databaseConfig, redisConfig } from './config';
 import { CardsModule } from './modules/cards/cards.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { IamModule } from './modules/iam/iam.module';
 import { TopicsModule } from './modules/topics/topics.module';
 import { UserModule } from './modules/users/user.module';
@@ -25,14 +26,15 @@ import { UserModule } from './modules/users/user.module';
         password: configService.getOrThrow<string>('database.password'),
         database: configService.getOrThrow<string>('database.name'),
         autoLoadEntities: true,
-        synchronize: true
+        synchronize: false
       })
     }),
     RedisModule,
     IamModule,
     UserModule,
     CardsModule,
-    TopicsModule
+    TopicsModule,
+    CategoriesModule
   ],
   controllers: [],
   providers: []
