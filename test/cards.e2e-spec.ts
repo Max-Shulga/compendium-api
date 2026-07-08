@@ -1,168 +1,180 @@
-import type { INestApplication } from '@nestjs/common';
 import { HttpStatus } from '@nestjs/common';
-import request from 'supertest';
-import type { DataSource } from 'typeorm';
+import type { APIRequestContext } from '@playwright/test';
+import { expect, request as playwrightRequest, test } from '@playwright/test';
+import type { Client } from 'pg';
 
-import { createApp } from './helpers/app';
+import { createDbClient } from './helpers/db';
 
-describe('Cards (e2e)', () => {
-  let app: INestApplication;
-  let dataSource: DataSource;
+test.describe('Cards (e2e)', () => {
+  let api: APIRequestContext;
+  let db: Client;
   let regularToken: string;
   let emperorToken: string;
   let createdCardId: number;
 
-  beforeAll(async () => {
-    ({ app, dataSource } = await createApp());
+  test.beforeAll(async () => {
+    api = await playwrightRequest.newContext();
+    db = createDbClient();
+    await db.connect();
 
-    await request(app.getHttpServer())
-      .post('/auth/sign-up')
-      .send({ email: 'cards-regular@example.com', password: 'regularpass123' });
+    await api.post('/auth/sign-up', {
+      data: { email: 'cards-regular@example.com', password: 'regularpass123' }
+    });
 
-    const regularRes = await request(app.getHttpServer())
-      .post('/auth/sign-in')
-      .send({ email: 'cards-regular@example.com', password: 'regularpass123' });
-    regularToken = regularRes.body.accessToken as string;
+    const regularRes = await api.post('/auth/sign-in', {
+      data: { email: 'cards-regular@example.com', password: 'regularpass123' }
+    });
+    regularToken = (await regularRes.json()).accessToken as string;
 
-    await request(app.getHttpServer())
-      .post('/auth/sign-up')
-      .send({ email: 'cards-emperor@example.com', password: 'emperorpass123' });
+    await api.post('/auth/sign-up', {
+      data: { email: 'cards-emperor@example.com', password: 'emperorpass123' }
+    });
 
-    await dataSource.query(
+    await db.query(
       // eslint-disable-next-line quotes
       "UPDATE users SET role = 'emperor' WHERE email = 'cards-emperor@example.com'"
     );
 
-    const emperorRes = await request(app.getHttpServer())
-      .post('/auth/sign-in')
-      .send({ email: 'cards-emperor@example.com', password: 'emperorpass123' });
-    emperorToken = emperorRes.body.accessToken as string;
+    const emperorRes = await api.post('/auth/sign-in', {
+      data: { email: 'cards-emperor@example.com', password: 'emperorpass123' }
+    });
+    emperorToken = (await emperorRes.json()).accessToken as string;
   });
 
-  afterAll(async () => {
-    await dataSource.query('DELETE FROM card');
-    await dataSource.query('DELETE FROM users');
-    await app.close();
+  test.afterAll(async () => {
+    await db.query('DELETE FROM card');
+    await db.query('DELETE FROM users');
+    await db.end();
+    await api.dispose();
   });
 
-  describe('POST /cards', () => {
-    it('401 without token', () =>
-      request(app.getHttpServer())
-        .post('/cards')
-        .send({ title: 'No Auth Card', text: 'Content' })
-        .expect(HttpStatus.UNAUTHORIZED));
-
-    it('403 for regular user', () =>
-      request(app.getHttpServer())
-        .post('/cards')
-        .set('Authorization', `Bearer ${regularToken}`)
-        .send({ title: 'Regular Card', text: 'Content' })
-        .expect(HttpStatus.FORBIDDEN));
-
-    it('201 for emperor', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/cards')
-        .set('Authorization', `Bearer ${emperorToken}`)
-        .send({ title: 'Emperor Card', text: 'Test content' })
-        .expect(HttpStatus.CREATED);
-
-      expect(res.body).toHaveProperty('id');
-      expect(res.body.title).toBe('Emperor Card');
-      createdCardId = res.body.id as number;
+  test.describe('POST /cards', () => {
+    test('401 without token', async () => {
+      const res = await api.post('/cards', {
+        data: { title: 'No Auth Card', text: 'Content' }
+      });
+      expect(res.status()).toBe(HttpStatus.UNAUTHORIZED);
     });
 
-    it('400 on missing required fields', () =>
-      request(app.getHttpServer())
-        .post('/cards')
-        .set('Authorization', `Bearer ${emperorToken}`)
-        .send({ title: 'No Text Card' })
-        .expect(HttpStatus.BAD_REQUEST));
-  });
-
-  describe('GET /cards', () => {
-    it('200 without token (public)', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/cards')
-        .expect(HttpStatus.OK);
-
-      expect(Array.isArray(res.body)).toBe(true);
+    test('403 for regular user', async () => {
+      const res = await api.post('/cards', {
+        headers: { Authorization: `Bearer ${regularToken}` },
+        data: { title: 'Regular Card', text: 'Content' }
+      });
+      expect(res.status()).toBe(HttpStatus.FORBIDDEN);
     });
 
-    it('200 returns array', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/cards')
-        .set('Authorization', `Bearer ${regularToken}`)
-        .expect(HttpStatus.OK);
+    test('201 for emperor', async () => {
+      const res = await api.post('/cards', {
+        headers: { Authorization: `Bearer ${emperorToken}` },
+        data: { title: 'Emperor Card', text: 'Test content' }
+      });
+      expect(res.status()).toBe(HttpStatus.CREATED);
 
-      expect(Array.isArray(res.body)).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty('id');
+      expect(body.title).toBe('Emperor Card');
+      createdCardId = body.id as number;
+    });
+
+    test('400 on missing required fields', async () => {
+      const res = await api.post('/cards', {
+        headers: { Authorization: `Bearer ${emperorToken}` },
+        data: { title: 'No Text Card' }
+      });
+      expect(res.status()).toBe(HttpStatus.BAD_REQUEST);
     });
   });
 
-  describe('GET /cards/:id', () => {
-    it('200 returns card', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/cards/${createdCardId}`)
-        .set('Authorization', `Bearer ${regularToken}`)
-        .expect(HttpStatus.OK);
-
-      expect(res.body.id).toBe(createdCardId);
-      expect(res.body.title).toBe('Emperor Card');
+  test.describe('GET /cards', () => {
+    test('200 without token (public)', async () => {
+      const res = await api.get('/cards');
+      expect(res.status()).toBe(HttpStatus.OK);
+      expect(Array.isArray(await res.json())).toBe(true);
     });
 
-    it('404 for non-existent card', () =>
-      request(app.getHttpServer())
-        .get('/cards/999999')
-        .set('Authorization', `Bearer ${regularToken}`)
-        .expect(HttpStatus.NOT_FOUND));
-  });
-
-  describe('PATCH /cards/:id', () => {
-    it('401 without token', () =>
-      request(app.getHttpServer())
-        .patch(`/cards/${createdCardId}`)
-        .send({ title: 'Updated' })
-        .expect(HttpStatus.UNAUTHORIZED));
-
-    it('403 for regular user', () =>
-      request(app.getHttpServer())
-        .patch(`/cards/${createdCardId}`)
-        .set('Authorization', `Bearer ${regularToken}`)
-        .send({ title: 'Hacked' })
-        .expect(HttpStatus.FORBIDDEN));
-
-    it('200 updates card for emperor', async () => {
-      const res = await request(app.getHttpServer())
-        .patch(`/cards/${createdCardId}`)
-        .set('Authorization', `Bearer ${emperorToken}`)
-        .send({ title: 'Updated Card' })
-        .expect(HttpStatus.OK);
-
-      expect(res.body.title).toBe('Updated Card');
+    test('200 returns array', async () => {
+      const res = await api.get('/cards', {
+        headers: { Authorization: `Bearer ${regularToken}` }
+      });
+      expect(res.status()).toBe(HttpStatus.OK);
+      expect(Array.isArray(await res.json())).toBe(true);
     });
   });
 
-  describe('DELETE /cards/:id', () => {
-    it('401 without token', () =>
-      request(app.getHttpServer())
-        .delete(`/cards/${createdCardId}`)
-        .expect(HttpStatus.UNAUTHORIZED));
+  test.describe('GET /cards/:id', () => {
+    test('200 returns card', async () => {
+      const res = await api.get(`/cards/${createdCardId}`, {
+        headers: { Authorization: `Bearer ${regularToken}` }
+      });
+      expect(res.status()).toBe(HttpStatus.OK);
 
-    it('403 for regular user', () =>
-      request(app.getHttpServer())
-        .delete(`/cards/${createdCardId}`)
-        .set('Authorization', `Bearer ${regularToken}`)
-        .expect(HttpStatus.FORBIDDEN));
+      const body = await res.json();
+      expect(body.id).toBe(createdCardId);
+      expect(body.title).toBe('Emperor Card');
+    });
 
-    it('200 deletes card for emperor', () =>
-      request(app.getHttpServer())
-        .delete(`/cards/${createdCardId}`)
-        .set('Authorization', `Bearer ${emperorToken}`)
-        .expect(HttpStatus.OK));
+    test('404 for non-existent card', async () => {
+      const res = await api.get('/cards/999999', {
+        headers: { Authorization: `Bearer ${regularToken}` }
+      });
+      expect(res.status()).toBe(HttpStatus.NOT_FOUND);
+    });
+  });
 
-    it('404 after deletion', () =>
-      request(app.getHttpServer())
-        .get(`/cards/${createdCardId}`)
-        .set('Authorization', `Bearer ${regularToken}`)
-        .expect(HttpStatus.NOT_FOUND));
+  test.describe('PATCH /cards/:id', () => {
+    test('401 without token', async () => {
+      const res = await api.patch(`/cards/${createdCardId}`, {
+        data: { title: 'Updated' }
+      });
+      expect(res.status()).toBe(HttpStatus.UNAUTHORIZED);
+    });
+
+    test('403 for regular user', async () => {
+      const res = await api.patch(`/cards/${createdCardId}`, {
+        headers: { Authorization: `Bearer ${regularToken}` },
+        data: { title: 'Hacked' }
+      });
+      expect(res.status()).toBe(HttpStatus.FORBIDDEN);
+    });
+
+    test('200 updates card for emperor', async () => {
+      const res = await api.patch(`/cards/${createdCardId}`, {
+        headers: { Authorization: `Bearer ${emperorToken}` },
+        data: { title: 'Updated Card' }
+      });
+      expect(res.status()).toBe(HttpStatus.OK);
+
+      const body = await res.json();
+      expect(body.title).toBe('Updated Card');
+    });
+  });
+
+  test.describe('DELETE /cards/:id', () => {
+    test('401 without token', async () => {
+      const res = await api.delete(`/cards/${createdCardId}`);
+      expect(res.status()).toBe(HttpStatus.UNAUTHORIZED);
+    });
+
+    test('403 for regular user', async () => {
+      const res = await api.delete(`/cards/${createdCardId}`, {
+        headers: { Authorization: `Bearer ${regularToken}` }
+      });
+      expect(res.status()).toBe(HttpStatus.FORBIDDEN);
+    });
+
+    test('200 deletes card for emperor', async () => {
+      const res = await api.delete(`/cards/${createdCardId}`, {
+        headers: { Authorization: `Bearer ${emperorToken}` }
+      });
+      expect(res.status()).toBe(HttpStatus.OK);
+    });
+
+    test('404 after deletion', async () => {
+      const res = await api.get(`/cards/${createdCardId}`, {
+        headers: { Authorization: `Bearer ${regularToken}` }
+      });
+      expect(res.status()).toBe(HttpStatus.NOT_FOUND);
+    });
   });
 });
