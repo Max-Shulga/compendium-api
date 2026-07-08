@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
-import { TopicCard } from '@/modules/topics/entities/topic-card.entity';
+import { TopicCard } from '../../topics/entities/topic-card.entity';
 
 @Entity()
 export class Card {
