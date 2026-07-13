@@ -4,7 +4,7 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, Not, Repository } from 'typeorm';
 
 import { PaginationQueryDto } from '@/common/dto/pagination-query.dto';
 import { Card } from '@/modules/cards/entities/card.entity';
@@ -44,10 +44,21 @@ export class CategoriesService {
     private readonly dataSource: DataSource
   ) {}
 
-  findAll(paginationQuery: PaginationQueryDto): Promise<Category[]> {
+  async findAll(paginationQuery: PaginationQueryDto): Promise<Category[]> {
     const { limit, offset } = paginationQuery;
 
+    const nestedCategoryIds = await this.categoryItemRepository
+      .createQueryBuilder('categoryItem')
+      .select('DISTINCT categoryItem.itemId', 'itemId')
+      .where('categoryItem.itemType = :itemType', {
+        itemType: CategoryItemType.Category
+      })
+      .getRawMany<{ itemId: number }>();
+
+    const excludedIds = nestedCategoryIds.map((row) => row.itemId);
+
     return this.categoryRepository.find({
+      where: excludedIds.length ? { id: Not(In(excludedIds)) } : {},
       take: limit,
       skip: offset
     });
