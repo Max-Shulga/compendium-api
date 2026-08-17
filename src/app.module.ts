@@ -7,6 +7,7 @@ import { appConfig, databaseConfig, redisConfig } from './config';
 import { CardsModule } from './modules/cards/cards.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { IamModule } from './modules/iam/iam.module';
+import { InterviewTopicsModule } from './modules/interview-topics/interview-topics.module';
 import { TopicsModule } from './modules/topics/topics.module';
 import { UserModule } from './modules/users/user.module';
 
@@ -37,7 +38,8 @@ import { UserModule } from './modules/users/user.module';
     UserModule,
     CardsModule,
     TopicsModule,
-    CategoriesModule
+    CategoriesModule,
+    InterviewTopicsModule
   ],
   controllers: [],
   providers: []
